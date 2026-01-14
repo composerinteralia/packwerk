@@ -1,9 +1,6 @@
 # typed: true
 # frozen_string_literal: true
 
-# TODO: make better_html not require Rails
-require "rails/railtie"
-
 require "test_helper"
 
 module Packwerk
@@ -30,12 +27,17 @@ module Packwerk
       test "#call writes parse error to stdout" do
         error_message = "stub error"
         err = Parser::SyntaxError.new(stub(message: error_message))
-        parser = stub
-        parser.stubs(:ast).raises(err)
+        
+        # Create a mock Herb result that raises an error
+        mock_result = stub(success?: true, value: stub)
+        ::Herb.stubs(:parse).returns(mock_result)
+        
+        # Stub the visitor to raise the error
+        visitor_stub = stub
+        visitor_stub.stubs(:visit).raises(err)
+        Erb::ErbCodeVisitor.stubs(:new).returns(visitor_stub)
 
-        parser_class_stub = typed_mock(new: parser)
-
-        parser = Erb.new(parser_class: parser_class_stub)
+        parser = Erb.new
         file_path = fixture_path("invalid.erb")
 
         exc = assert_raises(Parsers::ParseError) do
@@ -51,12 +53,17 @@ module Packwerk
       test "#call writes encoding error to stdout" do
         error_message = "stub error"
         err = EncodingError.new(error_message)
-        parser = stub
-        parser.stubs(:ast).raises(err)
+        
+        # Create a mock Herb result that raises an error
+        mock_result = stub(success?: true, value: stub)
+        ::Herb.stubs(:parse).returns(mock_result)
+        
+        # Stub the visitor to raise the error
+        visitor_stub = stub
+        visitor_stub.stubs(:visit).raises(err)
+        Erb::ErbCodeVisitor.stubs(:new).returns(visitor_stub)
 
-        parser_class_stub = typed_mock(new: parser)
-
-        parser = Erb.new(parser_class: parser_class_stub)
+        parser = Erb.new
         file_path = fixture_path("invalid.erb")
 
         exc = assert_raises(Parsers::ParseError) do
