@@ -3,6 +3,7 @@
 
 require "ast/node"
 require "herb"
+require "parser"
 
 module Packwerk
   module Parsers
@@ -11,8 +12,10 @@ module Packwerk
 
       include ParserInterface
 
-      sig { params(ruby_parser: Ruby).void }
-      def initialize(ruby_parser: Ruby.new)
+      sig { params(parser_class: T.untyped, ruby_parser: Ruby).void }
+      def initialize(parser_class: nil, ruby_parser: Ruby.new)
+        # parser_class is kept for backward compatibility but is no longer used
+        # herb does not require a configurable parser class
         @ruby_parser = ruby_parser
       end
 
@@ -50,6 +53,8 @@ module Packwerk
         
         # Herb returns a result object - check if parsing was successful
         unless result.success?
+          # If parsing failed, log the error but return nil (no Ruby to extract)
+          # This is consistent with the javascript_valid.erb test case
           return nil
         end
         
@@ -100,24 +105,33 @@ module Packwerk
 
         sig { params(node: T.untyped).void }
         def extract_code(node)
-          # Skip ERB comments (<%#)
-          return if comment?(node)
-          # Skip escaped ERB (<%%
-          return if escape?(node)
+          # Skip ERB comments (<%#) and escaped ERB (<%%
+          return if comment?(node) || escape?(node)
 
           # Extract the Ruby code from the node
-          code = node.content.value
+          # Safely access node.content and its value
+          return unless node.respond_to?(:content)
+          content = node.content
+          return unless content.respond_to?(:value)
+          
+          code = content.value
           @code_segments << code if code && !code.strip.empty?
         end
 
         sig { params(node: T.untyped).returns(T::Boolean) }
         def comment?(node)
-          node.tag_opening.value == "<%#"
+          return false unless node.respond_to?(:tag_opening)
+          tag_opening = node.tag_opening
+          return false unless tag_opening.respond_to?(:value)
+          tag_opening.value == "<%#"
         end
 
         sig { params(node: T.untyped).returns(T::Boolean) }
         def escape?(node)
-          node.tag_opening.value == "<%%"
+          return false unless node.respond_to?(:tag_opening)
+          tag_opening = node.tag_opening
+          return false unless tag_opening.respond_to?(:value)
+          tag_opening.value == "<%%"
         end
       end
     end
