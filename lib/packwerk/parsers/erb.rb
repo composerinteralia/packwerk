@@ -53,7 +53,7 @@ module Packwerk
         
         # Herb returns a result object - check if parsing was successful
         unless result.success?
-          # If parsing failed, log the error but return nil (no Ruby to extract)
+          # If parsing failed, return nil (no Ruby to extract)
           # This is consistent with the javascript_valid.erb test case
           return nil
         end
@@ -105,7 +105,7 @@ module Packwerk
 
         sig { params(node: T.untyped).void }
         def extract_code(node)
-          # Skip ERB comments (<%#) and escaped ERB (<%%
+          # Skip ERB comments (<%#) and escaped ERB (<%%)
           return if comment?(node) || escape?(node)
 
           # Extract the Ruby code from the node
